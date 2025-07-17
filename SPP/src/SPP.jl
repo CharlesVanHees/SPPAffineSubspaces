@@ -1,0 +1,65 @@
+using HiGHS, JuMP
+
+include("Graph.jl")
+
+function solveSPP(G::DirectedGraph, s::T, t::T, verbose::Bool=true) where {T}
+    @assert T <: eltype(G.Vertices)
+    @assert s in G.Vertices && t in G.Vertices
+
+    model = Model(HiGHS.Optimizer)
+    set_silent(model)
+    
+    @variable(model, y_e[1:G.V, 1:G.V], Bin)
+    for i in 1:G.V, j in 1:G.V
+        if isnothing(G.Adj[i][j]) fix(y_e[i,j], 0) end # no edge between i and j
+    end
+
+    @objective(model, Min, sum(G.Adj[i][j] ≠ nothing ? y_e[i,j] * G.Adj[i][j] : 0 for j in 1:G.V, i in 1:G.V))
+
+    # Flow conservation constraint
+    @constraint(model, [i in 1:G.V], (sum(y_e[:,i]) + (s == G.Vertices[i])) == (sum(y_e[i,:]) + (t == G.Vertices[i])))
+    # Degree constraint
+    @constraint(model, [i in 1:G.V], (sum(y_e[:,i])) + (s == G.Vertices[i]) <= 1)
+
+    relax_integrality(model)
+
+    optimize!(model)
+    if is_solved_and_feasible(model)
+        println("A solution of optimal cost $(objective_value(model)) has been found!")
+    else println("There is no path between your source and target in the given graph.")
+    end
+
+    if verbose
+        println("The optimal path is the following:")
+        println("Source s = $(s)")
+        i = findfirst(G.Vertices .== s)
+        while i != findfirst(G.Vertices .== t)
+            j = findfirst(Vector(value.(y_e[i,:])) .== 1)
+            println("$(G.Vertices[i]) --> $(G.Vertices[j])\tCost: $(G.Adj[i][j])")
+            i = j
+        end
+        println("Target t = $(t)")
+    end
+end
+
+function testSPP()
+    G = emptyDirectedGraph(String)
+    addVertex!(G, "Apple")
+    addVertex!(G, "Banana")
+    addVertex!(G, "Peer")
+    addVertex!(G, "Watermelon")
+    addVertex!(G, "Strawberry")
+    addEdge!(G, "Apple", "Banana", 3)
+    addEdge!(G, "Apple", "Watermelon", 3)
+    addEdge!(G, "Apple", "Strawberry", 2)
+    addEdge!(G, "Watermelon", "Strawberry", 1)
+    addEdge!(G, "Watermelon", "Peer", 4)
+    addEdge!(G, "Banana", "Peer", 1)
+    addEdge!(G, "Strawberry", "Peer", 1)
+    addEdge!(G, "Strawberry", "Apple", 1)
+
+    # The shortest path in this example should be Apple --> Strawberry --> Peer of cost 3
+    solveSPP(G, "Apple", "Peer")
+end
+
+testSPP()
