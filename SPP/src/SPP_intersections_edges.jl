@@ -1,7 +1,10 @@
-using HiGHS, JuMP
+using Gurobi, JuMP
 
 include("AffineSubspace.jl")
 include("Graph.jl")
+include("Problem.jl")
+
+myOptimizer = Gurobi
 
 function problemToGraphE(P::Problem)
     G = emptyDirectedGraph(AffineSubspace)
@@ -15,7 +18,7 @@ end
 function SPPGraphE(G::DirectedGraph, s::Vector{T}, t::Vector{T}, verbose::Bool=true) where {T <: Real}
     n = size(G.Vertices[1].A, 2)
 
-    model = Model(HiGHS.Optimizer)
+    model = Model(Gurobi.Optimizer)
     # set_silent(model)
 
     @variable(model, y_e[1:G.V, 1:G.V], Bin)

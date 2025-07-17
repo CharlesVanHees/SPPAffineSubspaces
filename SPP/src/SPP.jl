@@ -1,12 +1,14 @@
-using HiGHS, JuMP
+using Gurobi, JuMP
 
 include("Graph.jl")
+
+myOptimizer = Gurobi
 
 function solveSPP(G::DirectedGraph, s::T, t::T, verbose::Bool=true) where {T}
     @assert T <: eltype(G.Vertices)
     @assert s in G.Vertices && t in G.Vertices
 
-    model = Model(HiGHS.Optimizer)
+    model = Model(myOptimizer.Optimizer)
     set_silent(model)
     
     @variable(model, y_e[1:G.V, 1:G.V], Bin)
