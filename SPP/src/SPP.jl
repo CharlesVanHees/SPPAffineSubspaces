@@ -21,8 +21,6 @@ function solveSPP(G::DirectedGraph, s::T, t::T, verbose::Bool=true) where {T}
     # Degree constraint
     @constraint(model, [i in 1:G.V], (sum(y_e[:,i])) + (s == G.Vertices[i]) <= 1)
 
-    relax_integrality(model)
-
     optimize!(model)
     if is_solved_and_feasible(model)
         println("A solution of optimal cost $(objective_value(model)) has been found!")
@@ -41,25 +39,3 @@ function solveSPP(G::DirectedGraph, s::T, t::T, verbose::Bool=true) where {T}
         println("Target t = $(t)")
     end
 end
-
-function testSPP()
-    G = emptyDirectedGraph(String)
-    addVertex!(G, "Apple")
-    addVertex!(G, "Banana")
-    addVertex!(G, "Peer")
-    addVertex!(G, "Watermelon")
-    addVertex!(G, "Strawberry")
-    addEdge!(G, "Apple", "Banana", 3)
-    addEdge!(G, "Apple", "Watermelon", 3)
-    addEdge!(G, "Apple", "Strawberry", 2)
-    addEdge!(G, "Watermelon", "Strawberry", 1)
-    addEdge!(G, "Watermelon", "Peer", 4)
-    addEdge!(G, "Banana", "Peer", 1)
-    addEdge!(G, "Strawberry", "Peer", 1)
-    addEdge!(G, "Strawberry", "Apple", 1)
-
-    # The shortest path in this example should be Apple --> Strawberry --> Peer of cost 3
-    solveSPP(G, "Apple", "Peer")
-end
-
-testSPP()

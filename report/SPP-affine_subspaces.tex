@@ -134,11 +134,11 @@ The second option is to consider the intersections of affine subspaces as the ed
     \caption{GCS corresponding to the problem presented in figure~\ref{fig:SPP-problem}, with the intersections of subspaces as edges.}\label{fig:edges}
 \end{figure}
 
-Let $\mathcal{V}$ (resp. $\mathcal{E}$) be the set of vertices (resp. edges). For each affine subspace, we define the convex region \[\mathcal{C}_i \coloneq \{x \in \mathbb{R}^n \mid A_i x + b_i = 0\}, \qquad i = 1, \dots, m.\]
+Let $\mathcal{V}$ (resp. $\mathcal{E}$) be the set of vertices (resp.~edges). For each affine subspace, we define the convex region \[\mathcal{C}_i \coloneq \{x \in \mathbb{R}^n \mid A_i x + b_i = 0\}, \qquad i = 1, \dots, m.\]
 To each vertex $j \in \mathcal{V}\setminus\{s, t\}$, we associate the convex constraint set $\mathcal{X}_j \coloneq \mathcal{C}_j \times \mathcal{C}_j$. Therefore, the points inside those sets can be seen as pairs of two points in the affine subspace: the starting point and the ending point. Mathematically, $\mathbf{x}_i \coloneq (\mathbf{q}_{i,0}, \mathbf{q}_{i,1})$, with $\mathbf{q}_{i,0}, \mathbf{q}_{i,1} \in \mathbb{R}^n$. We associate a cost function on those vertices, begin the euclidean distance between the two points, multiplied by the cost of the affine subspace: \[f_i(\mathbf{x}_i) = \beta_i {\lVert \mathbf{q}_{i,0} - \mathbf{q}_{i,1} \rVert}_2, \qquad i = 1, \dots, m\]
 For all the edges between two such vertices, we have to ensure the continuity of the path by imposing $\mathbf{q}_{i,1} = \mathbf{q}_{j,0}$, where $i$ and $j$ are the vertices incident to the edge.
 
-The source and the target are paired with the singletons corresponding to their coordinates. No cost function is associated with them. We impose that for all vertex $i \in \mathcal{V}$ incident to the source (resp. target), $\mathbf{q}_{i,0}$ (resp. $\mathbf{q}_{i,1}$) is equal to the coordinates of $s$ (resp. $t$).
+The source and the target are paired with the singletons corresponding to their coordinates. No cost function is associated with them. We impose that for all vertex $i \in \mathcal{V}$ incident to the source (resp.~target), $\mathbf{q}_{i,0}$ (resp. $\mathbf{q}_{i,1}$) is equal to the coordinates of $s$ (resp. $t$).
 
 Finally, 
 
