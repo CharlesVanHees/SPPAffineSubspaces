@@ -19,4 +19,4 @@ function intersect(AS1::AffineSubspace, AS2::AffineSubspace)
     return !isempty(H)
 end
 
-contains(AS::AffineSubspace, x::Vector{Real}) = norm(AS.A * x + AS.b) <= 1e-8
+contains(AS::AffineSubspace, x::Vector{T}) where {T <: Real} = norm(AS.A * x + AS.b) <= 1e-8

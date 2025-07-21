@@ -23,17 +23,17 @@ function solveSPP(G::DirectedGraph, s::T, t::T, verbose::Bool=true) where {T}
     # Degree constraint
     @constraint(model, [i in 1:G.V], (sum(y_e[:,i])) + (s == G.Vertices[i]) <= 1)
 
-    optimize!(model)
+    optimize!(model); println()
     if is_solved_and_feasible(model)
         println("A solution of optimal cost $(objective_value(model)) has been found!")
-    else println("There is no path between your source and target in the given graph.")
+    else println("There is no path between your source and target in the given graph."); return
     end
 
     if verbose
         println("The optimal path is the following:")
         println("Source s = $(s)")
         i = findfirst(G.Vertices .== s)
-        while i != findfirst(G.Vertices .== t)
+        while !(i in findall(G.Vertices .== t))
             j = findfirst(Vector(value.(y_e[i,:])) .== 1)
             println("$(G.Vertices[i]) --> $(G.Vertices[j])\tCost: $(G.Adj[i][j])")
             i = j
