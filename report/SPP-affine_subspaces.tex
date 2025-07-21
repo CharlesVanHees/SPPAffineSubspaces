@@ -1,6 +1,6 @@
 \documentclass[a4paper, 12pt]{article}
 
-\usepackage{amsfonts, amsmath, amssymb}
+\usepackage{amsfonts, amsmath, amssymb, amsthm}
 \usepackage[english]{babel}
 \usepackage[style=alphabetic]{biblatex}
 \addbibresource{bibliography.bib}
@@ -10,24 +10,31 @@
 \usepackage{mathtools}
 \usepackage{nicematrix}
 \usepackage{tikz}
+\usetikzlibrary{shapes.multipart}
 \usepackage[dvipsnames]{xcolor}
 
 \setlength{\parindent}{0pt}
+\newlength{\indentsize}
+\setlength{\indentsize}{15pt}
 
-\title{Shortest Path Problem in Affine Subspaces}
-\author{}
-\date{\vspace{-1cm}\today}
+\newtheorem*{remark}{Remark}
+
+% chktex-file 44
+
+\title{\vspace{-0.6cm}Shortest Path Problem in Affine Subspaces}
+\author{Charles Van Hees}
+\date{\today}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-    In this short document, we describe the problem of finding the shortest path between a source $s$ and a target $t$, both in $\mathbb{R}^n$, while staying on affine subspaces $\{x \in \mathbb{R}^n \vert A_i x + b_i = 0\}, i = 1, \dots, m$. In the~\hyperref[sec:statement]{first section}, we introduce the problem and the notations used. Then, in section~\ref{sec:modelization}, we modelize it as a Shortest Path Problem (SPP) in a Graph of Convex Sets (GCS). We will explore two approaches for this. In the~\hyperref[sec:experiments]{last section}, we will discuss the pros and cons of both methods, based on expiments in Julia.
+    In this short document, we describe the problem of finding the shortest path between a source $\mathbf{s}$ and a target $\mathbf{t}$, both in $\mathbb{R}^n$, while staying on affine subspaces $\{\mathbf{x} \in \mathbb{R}^n \vert A_i \mathbf{x} + b_i = 0\}, i = 1, \dots, m$. In the~\hyperref[sec:statement]{first section}, we introduce the problem and the notations used. Then, in section~\ref{sec:modelization}, we modelize it as a Shortest Path Problem (SPP) in a Graph of Convex Sets (GCS). We will explore two approaches for this. In the~\hyperref[sec:experiments]{last section}, we will discuss the pros and cons of both methods, based on expiments in Julia.
 \end{abstract}
 
 \section{Problem statement}\label{sec:statement}
-Let $s, t \in \mathbb{R}^n$ denote a source and a target respectively. Given a set of parameters \[{\left\{(A_i, b_i)\right\}}_{i=1}^{m} \subset \mathbb{R}^{d \times n} \times \mathbb{R}^d,\] we would like to find a path $q : [0,T] \mapsto \mathbb{R}^n$, with $q(0) = s$ and $q(T) = t$, such that, \[\forall \tau \in [0,T], \exists i \in \{1, \dots, m\} : A_i q(\tau) + b_i = 0.\] We will assume throughout this work that $s$ and $t$ belong to at least one of those affine subspaces. If it is not the case, trivially, such a path does not exist. The value of $T$ may be interpreted as the time at which we reach the target, or the length of the path between the source and the target.\\
-In addition to this, we associate to each affine subspace a cost $\beta_i \in \mathbb{R}_{\geq 0}, i = 1, \dots, m$, representing the price to pay for staying on the corresponding affine subspace.
+\hspace{\indentsize} Let $\mathbf{s}, \mathbf{t} \in \mathbb{R}^n$ denote a source and a target respectively. Given a set of parameters \[{\left\{(A_i, b_i)\right\}}_{i=1}^{m} \subset \mathbb{R}^{d \times n} \times \mathbb{R}^d,\] we would like to find a path $q : [0,T] \mapsto \mathbb{R}^n$, with $q(0) = \mathbf{s}$ and $q(T) = \mathbf{t}$, such that, \[\forall \tau \in [0,T], \exists i \in \{1, \dots, m\} : A_i q(\tau) + b_i = 0.\] We will assume throughout this work that $\mathbf{s}$ and $\mathbf{t}$ belong to at least one of those affine subspaces. If it is not the case, trivially, such a path does not exist. The value of $T$ may be interpreted as the time at which we reach the target, or the length of the path between the source and the target.\\
+In addition to this, we associate to each affine subspace a cost $\beta_i \in \mathbb{R}_{\geq 0}, i = 1, \dots, m$, representing the price to pay (per unity of measure) for staying on the corresponding affine subspace.
 
 An example of such a problem in two dimensions is given in figure~\ref{fig:SPP-problem}.
 
@@ -49,15 +56,45 @@ An example of such a problem in two dimensions is given in figure~\ref{fig:SPP-p
         \draw[ForestGreen, very thick] (-1.5,-1.5) -- (0,3);
         \draw[ForestGreen, very thick] (0,3) -- (1.5,-1.5);
     \end{tikzpicture}
-    \caption{Example of an SPP in which the path has to stay on given affine subspaces. In this example, we have three affine subspaces, of cost $10$, $1$ and $1$ respectively. The shortest path between the source $s$ and the target $t$ is represented in green. Notice that the high cost of the horizontal line prevents of using it.}\label{fig:SPP-problem}
+    \caption{Example of an SPP in which the path has to stay on given affine subspaces. We have three affine subspaces, of cost $10$, $1$ and $1$ respectively. The shortest path between the source $\mathbf{s}$ and the target $\mathbf{t}$ is represented in green. Notice the high cost of the horizontal line, preventing its utilization.}\label{fig:SPP-problem}
 \end{figure}
 
 \section{Modelization}\label{sec:modelization}
-In this section, we modelize mathematically the problem as a Shortest Path Problem (SPP) in a Graph of Convex Sets (GCS). GCS is a framework used to modelize graphs whose vertices are convex sets. It has been introduced in Tobia Marcucci's thesis~\cite{Tobia}, and may be used for several applications, like robot motion planning.\\
-We see at least two ways to tackle this problem. The first one is by considering a graph in which the vertices are given by the intersection of the affine subspaces, and the edges by the subspaces themselves. This first approach is expended in subsection~\ref{subsec:vertices}. An alternative, based on what is done in~\cite[Chapter~11]{Tobia} for motion planning, is to consider the subspaces as the vertices, binding two subspaces by an edge if they have an intersection. This is detailed in subsection~\ref{subsec:edges}.
+\hspace{\indentsize} In this section, we modelize mathematically the problem as a Shortest Path Problem (SPP) in a Graph of Convex Sets (GCS). GCS is a framework used to modelize graphs whose vertices are convex sets. It has been introduced in Tobia Marcucci's thesis~\cite{Tobia}, and may be used for several applications, like robot motion planning. The general model for SPP in GCS, with no cost on the vertices and nonnegative costs on the edges, is recalled in subsection~\ref{subsec:model}.\\
+We see at least two ways to tackle this problem. The first one is by considering a graph whose vertices are given by the intersection of the affine subspaces, and the edges by the subspaces themselves. This first approach is expended in subsection~\ref{subsec:vertices}. An alternative, based on what is done in~\cite[Chapter~11]{Tobia} for motion planning, is to consider the subspaces as the vertices, binding two subspaces by an edge if they have an intersection. This is detailed in subsection~\ref{subsec:edges}.
+
+\subsection{Model}\label{subsec:model}
+\hspace{\indentsize} Let $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ be a directed graph. To each vertex $v \in \mathcal{V}$, we associate a nonempty convex and compact set $\mathcal{X}_v \subset \mathbb{R}^p$. In the same way, to each edge $e = (v,w) \in \mathcal{E}$, we associate a nonempty convex and closed (not necessarily bounded) set $\mathcal{X}_e \subset \mathbb{R}^p \times \mathbb{R}^p$. In addition, a cost function $f_e : \mathbb{R}^p \times \mathbb{R}^p \mapsto \mathbb{R}$ is paired with each edge. We seek a path of minimal cost between a source $s \in \mathcal{V}$ and a target $t \in \mathcal{V}$. We assume here that there is no cost on the vertices and that the cost function $f_e$ is nonnegative. Thanks to these assumptions, the SPP on GCS can be modelized as\footnote{Details of how to obtain this model are available at~\cite[Chapters 5, 6 and 9]{Tobia}}~\cite[eq. 9.5]{Tobia}
+\begin{subequations}\label{eq:vertices}
+    \begin{align}
+    \text{minimize}\quad   & \sum_{e = (v,w) \in \mathcal{E}} \tilde{f}_e (\mathbf{z}_v^e, \mathbf{z}_w^e, y_e)\label{eq:vertices-a}\\
+    \text{subject to}\quad & y_e \in \{0, 1\} & \forall e \in \mathcal{E},\label{eq:vertices-b}\\
+                           & \sum_{e \in \mathcal{I}_v^{in}} y_e + \delta_{sv} = \sum_{e \in \mathcal{I}_v^{out}} y_e + \delta_{tv} \leq 1 & \forall v \in \mathcal{V},\label{eq:vertices-c}\\
+                           & \sum_{e \in \mathcal{I}_v^{in}} \mathbf{z}_v^e = \sum_{e \in \mathcal{I}_v^{out}} \mathbf{z}_v^e & \forall v \in \mathcal{V} \setminus \{s, t\},\label{eq:vertices-d}\\
+                           & (\mathbf{z}_v^e, y_e) \in \tilde{\mathcal{X}}_v & \forall v \in \mathcal{V}, e \in \mathcal{I}_v,\label{eq:vertices-e}\\
+                           & (\mathbf{z}_v^e, \mathbf{z}_w^e, y_e) \in \tilde{\mathcal{X}}_e & \forall e = (v,w) \in \mathcal{E}.\label{eq:vertices-f}
+    \end{align}
+\end{subequations}
+where $\tilde{f}_e$, $\tilde{\mathcal{X}}_v$ and $\tilde{\mathcal{X}}_e$ are the closures of the homogenizations\footnote{In what follows, the term \textit{closure} will often be omitted, even if it will implicitly be considered as such.} of $f_e$, $\mathcal{X}_v$ and $\mathcal{X}_e$ respectively, and \[\delta_{vw} = \begin{cases} 1 & \text{ if } v = w\\ 0 & \text{ otherwise}\end{cases} \qquad \forall v,w \in \mathcal{V}.\]
+
+For all $v \in \mathcal{V}$, the sets $\mathcal{I}_v^{in}$, $\mathcal{I}_v^{out}$ and $\mathcal{I}_v$ denote the sets of incoming edges to $v$, outgoing edges, and the union of incoming and outgoing edges respectively.
+
+\hspace{\indentsize} We distinguish three different kind of variables:
+\begin{itemize}
+    \item $\mathbf{x}_v \in \mathbb{R}^p$ for all $v \in \mathcal{V}$, which are continuous variables corresponding to the position of a point in the convex set of node $v$. These variables are constrained in the sets $\mathcal{X}_v$ if the shortest path goes through node $v$, which is hidden in the constraint~(\ref{eq:vertices-e});
+    \item $y_e \in \{0,1\}$ for all $e \in \mathcal{E}$, which are binary variables, corresponding to the choice of taking the edge $e$ or not in the path;
+    \item $\mathbf{z}_v^e \in \mathbb{R}^p$ for all $e \in \mathcal{I}_v$, for all $v \in \mathcal{V}$, which are auxiliary variables corresponding to the product of the two previous variables.
+\end{itemize}
+Notice that the variables $\mathbf{x}_v$ do not appear in model~(\ref{eq:vertices}), and the only decision variables that need to be given to the solver are $y_e$ and $\mathbf{z}_v^e$. We may then recover the values of the variables $\mathbf{x}_v$ at the vertices of the path as the value of $\mathbf{z}_v^e$ for an incident edge in the path (i.e., for which $y_e = 1$).
+
+\hspace{\indentsize} Constraints~\ref{eq:vertices-c} and~\ref{eq:vertices-d} can be seen as flow conservation equations, i.e., if a vertex is entered, then the path has to exit it. The $\delta_{ij}$ function defined above allows to have a virtual unit entering the source $s$ and exiting the target $t$. The upper bound of $1$ in~\ref{eq:vertices-c} is to ensure that a vertex is not entered twice, and is called the degree constraint. Finally, the constraint~\ref{eq:vertices-f} ensures that the edges belong to $\mathcal{X}_e$.
+
+\begin{remark} The dimension $p$ used here above to define the set $\mathcal{X}_v$ may be equal to the dimension $n$ of the problem defined in section~\ref{sec:statement} (like in subsection~\ref{subsec:vertices}), but has not to be equal (like in~\ref{subsec:edges}).\end{remark}
 
 \subsection{Intersections as vertices}\label{subsec:vertices}
-The first possibility is to construct a graph whose vertices are the intersections between affine subspaces, and whose edges are the affine subspaces, i.e., there is an edge between two vertices if they belong to a same affine subspace. We add to this graph two vertices, one for the source $s$ and one for the target $t$, associated with a singleton corresponding to there coordinates. For example, the GCS corresponding to the problem of figure~\ref{fig:SPP-problem} is drawn in figure~\ref{fig:vertices}. There are five vertices, corresponding to the three intersections, the source and the target.
+\hspace{\indentsize} The first possibility is to construct a graph whose vertices are the intersections between affine subspaces, and whose edges are the affine subspaces, i.e., there is an edge between two vertices if they belong to a same affine subspace. In addition, we put a weight on each edge, corresponding to the cost of the affine subspace binding the two intersections. Furthermore, all the edges are duplicated, in order to have a directed graph (the undirected edge between vertices $v$ and $w$ is transformed into one edge from $v$ to $w$ and one edge from $w$ to $v$).\\
+We add to this graph two vertices, one for the source $s$ and one for the target $t$, associated with the singleton corresponding to there coordinates. Those are binded to the vertices corresponding to subspaces of the affine subspaces to which they belong, with a simple directed edge (no need to come back to the source or to go out of the target). Again, a weight is put on these edges, being the cost of the corresponding affine subspace.\\
+For example, the GCS corresponding to the problem of figure~\ref{fig:SPP-problem} is drawn in figure~\ref{fig:vertices}. There are five vertices, corresponding to the three intersections, the source and the target.
 
 \begin{figure}[!htb]
     \centering
@@ -68,81 +105,72 @@ The first possibility is to construct a graph whose vertices are the intersectio
         \node[draw, circle] (4) [below left of=2] {$s$};
         \node[draw, circle] (5) [below right of=3] {$t$};
 
-        \draw (1) to (2);
-        \draw (1) to (3);
-        \draw (1) to [out=180, in=135, looseness=1] (4);
-        \draw (1) to [out=0, in=45, looseness=1] (5);
-        \draw (2) to (3);
-        \draw (2) to (4);
-        \draw (3) to (5);
+        \draw[thick, <->] (1) to (2); \node[anchor=east] at (-0.9,-0.8) {1};
+        \draw[thick, <->] (1) to (3); \node[anchor=west] at (0.9,-0.8) {1};
+        \draw[thick, <- ] (1) to [out=180, in=135, looseness=1] (4); \node[anchor=east] at (-3.4,-0.8) {1};
+        \draw[thick,  ->] (1) to [out=0, in=45, looseness=1] (5); \node[anchor=west] at (3.4,-0.8) {1};
+        \draw[thick, <->] (2) to (3); \node[anchor=north] at (0,-1.5) {10};
+        \draw[thick, <- ] (2) to (4); \node[anchor=east] at (-3.4,-3.3) {1};
+        \draw[thick,  ->] (3) to (5); \node[anchor=west] at (3.4,-3.3) {1};
     \end{tikzpicture}
-    \caption{GCS corresponding to the problem presented in figure~\ref{fig:SPP-problem}, with the intersections as vertices. The coordinates of the intersection points are there only for an illustration purpose, and were chosen randomly.}\label{fig:vertices}
+    \caption{GCS corresponding to the problem presented in figure~\ref{fig:SPP-problem}, with the intersections as vertices. The coordinates of the intersection points are there only for an illustration purpose.}\label{fig:vertices}
 \end{figure}
 
-Let $v$ and $w$ be two nodes of the graph, associated with the convex regions $\mathcal{X}_v$ and $\mathcal{X}_w$ respectively, and linked by an edge $e$. The cost function on the edges is defined as
-\begin{equation}\label{eq:f_e}
-    f_e(\mathbf{x}_v, \mathbf{x}_w) = \beta_e {\lVert \mathbf{x}_v - \mathbf{x}_w \rVert}_2,
+\hspace{\indentsize} Let us now describe mathematically all the components of this problem. To each vertex $v \in \mathcal{V}\setminus\{s,t\}$, we associate the convex region corresponding to the intersection of the two corresponding subspaces (let us say $i$ and $j$). This set is nonempty, closed, but not bounded. Therefore, we add an $L_{\infty}$-ball of radius $R$ large enough. The set $\mathcal{X}_v$ can subsequently be described binary \[\mathcal{X}_v \coloneq \left\{\mathbf{x} \in \mathbb{R}^n \left\lvert \begin{bmatrix} A_i \\ A_j \end{bmatrix} \mathbf{x} + \begin{bmatrix} b_i \\ b_j \end{bmatrix} = 0, {\lVert \mathbf{x} \rVert}_\infty \leq R \right.\right\}.\]
+
+The homogenization of this set is~\cite[eq. 2.5]{Tobia} \[\tilde{\mathcal{X}}_v \coloneq \left\{(\mathbf{x},y) \in \mathbb{R}^n \times \mathbb{R}_{\geq 0} \left\lvert \begin{bmatrix} A_i \\ A_j \end{bmatrix} \mathbf{x} + y \begin{bmatrix} b_i \\ b_j \end{bmatrix} = 0, {\lVert \mathbf{x} \rVert}_\infty \leq Ry \right.\right\}.\]
+
+For the source and the target, the sets $\mathcal{X}_s$ and $\mathcal{X}_t$ are easily described by their respective coordinates: \[\mathcal{X}_s \coloneq \{\mathbf{x} \in \mathbb{R}^n \left\lvert \mathbf{x} = \mathbf{s}\right.\} \qquad \mathcal{X}_t \coloneq \{\mathbf{x} \in \mathbb{R}^n \left\lvert \mathbf{x} = \mathbf{t}\right.\}.\]
+
+Their homogenizations are given by
+\begin{equation}\label{eq:homogenizationSourceTarget}
+    \tilde{\mathcal{X}}_s \coloneq \{(\mathbf{x},y) \in \mathbb{R}^n \times \mathbb{R}_{\geq 0} \left\lvert \mathbf{x} = \mathbf{s} y \right.\} \qquad \tilde{\mathcal{X}}_t \coloneq \{(\mathbf{x},y) \in \mathbb{R}^n \times \mathbb{R}_{\geq 0} \left\lvert \mathbf{x} = \mathbf{t} y \right.\}.
 \end{equation}
-where $\beta_e$ is the cost of the affine subspace linking the convex sets $\mathcal{X}_v$ and $\mathcal{X}_w$. There is no cost function on the vertices.
 
-Since there are no costs on the vertices and the costs on the edges are nonnegative, we may use the formulation (9.5) from~\cite{Tobia}\footnote{Notice that we do not need the constraint (9.5f) as there is no constraint on the edges for this problem}. For convenience, we rewrite the model in~(\ref{eq:vertices}).
-
-\begin{subequations}\label{eq:vertices}
-    \begin{align}
-    \text{minimize}\quad   & \sum_{e = [v,w] \in \mathcal{E}} \tilde{f}_e (\mathbf{z}_v^e, \mathbf{z}_w^e, y_e)\label{eq:vertices-a}\\
-    \text{subject to}\quad & y_e \in \{0, 1\} & \forall e \in \mathcal{E}\label{eq:vertices-b}\\
-                           & \sum_{e \in \mathcal{I}_v^{in}} y_e + \delta_{sv} = \sum_{e \in \mathcal{I}_v^{out}} y_e + \delta_{tv} \leq 1 & \forall v \in \mathcal{V}\label{eq:vertices-c}\\
-                           & \sum_{e \in \mathcal{I}_v^{in}} \mathbf{z}_v^e = \sum_{e \in \mathcal{I}_v^{out}} \mathbf{z}_v^e & \forall v \in \mathcal{V} \setminus \{s, t\}\label{eq:vertices-d}\\
-                           & (\mathbf{z}_v^e, y_e) \in \tilde{\mathcal{X}}_v & \forall v \in \mathcal{V}, e \in \mathcal{I}_v.\label{eq:vertices-e}
-    \end{align}
-\end{subequations}
-
-Let us explicit the terms, emphasing their signification in this problem. The set $\mathcal{V}$ (resp. $\mathcal{E}$) contains the vertices (resp.~the edges) of the graph. To each vertex $v \in \mathcal{V}$, we associate a convex set $\mathcal{X}_v$, corresponding to the intersection of the two affine subspaces represented by this vertex. Let $(A_i, b_i)$ and $(A_j, b_j)$, $i \neq j \in \{1, \dots, m\}$ be the parameters of those subspaces. Then, $\mathcal{X}_v$ can be described explicitly by \[\mathcal{X}_v \coloneq \left\{x \left\lvert \begin{bmatrix} A_i \\ A_j \end{bmatrix} x + \begin{bmatrix} b_i \\ b_j \end{bmatrix} = 0 \right.\right\}.\] The set $\mathcal{I}_v$, $v \in \mathcal{V}$, contains all the edges incident to the vertex $v$.
-
-We distinguish three different kind of variables:
-\begin{itemize}
-    \item $\mathbf{x}_v \in \mathbb{R}^n$ for all $v \in \mathcal{V}$, which are continuous random variables corresponding to the position of a point in the convex set of node $v$. These variables are constrained in the sets $\mathcal{X}_v$ if the shortest path goes through node $v$, which is hidden in the constraint~(\ref{eq:vertices-e});
-    \item $y_e \in \{0,1\}$ for all $e \in \mathcal{E}$, which are binary variables, corresponding to the choice of taking the edge $e$ or not in the path;
-    \item $\mathbf{z}_v^e \in \mathbb{R}^n$ for all $e \in \mathcal{I}_v$, for all $v \in \mathcal{V}$, which are auxiliary variables corresponding to the product of the two previous variables.
-\end{itemize}
-Notice that the variables $\mathbf{x}_v$ do not appear in model~(\ref{eq:vertices}), and the only decision variables that need to be given to the solver are $y_e$ and $\mathbf{z}_v^e$. We may then recover the values of the variables $\mathbf{x}_v$ at the vertices of the path as the value of $\mathbf{z}_v^e$ for an incident edge in the path (i.e., for which $y_e = 1$).
-
-The objective function~(\ref{eq:vertices-a}) is the homogenization of the function $f_e$ defined in~(\ref{eq:f_e}):
-\begin{equation}
-    \tilde{f}_e(\mathbf{z}_v^e, \mathbf{z}_w^e, y_e) \quad = \quad \left\{ \begin{split} f_e(\mathbf{z}_v^e, \mathbf{z}_w^e) & \quad \text{if $y_e = 1$} \\ \infty & \quad \text{if $y_e = 0$}\end{split} \right. \quad = \quad \left\{ \begin{split} f_e(\mathbf{x}_v, \mathbf{x}_w) & \quad \text{if $y_e = 1$} \\ \infty & \quad \text{if $y_e = 0$}\end{split} \right. .
-\end{equation}
-The constraint~(\ref{eq:vertices-c}) can be seen as a flow equation, i.e., if a vertex is entered, then the path has to exit it. We have $\delta_{ij}$ is equal to one if and only if $i = j$. This allows to have a virtual unit entering the source node $s$ and a virtual unit exiting the target node $t$. These values can not be greater than $1$, to prevent the path of going several times through the same vertex. Finally, the constraint~(\ref{eq:vertices-d}) is a valid equality generated from constraint~(\ref{eq:vertices-c}), as described in~\cite[Remark 5.3]{Tobia}, and represents the continuity of the path.
+\hspace{\indentsize} Let $v$ and $w$ be two nodes of the graph, associated with the convex regions $\mathcal{X}_v$ and $\mathcal{X}_w$ respectively, and linked by an edge $e$ of weight $\beta$. The convex cost function on the edges is defined as
+\begin{equation*}\label{eq:f_e}
+    f_e(\mathbf{x}_v, \mathbf{x}_w) = \beta {\lVert \mathbf{x}_v - \mathbf{x}_w \rVert}_2.
+\end{equation*}
+Its homogenization is given by
+\begin{equation*}
+    \tilde{f}_e(\mathbf{x}_v, \mathbf{x}_w, y) \quad = \quad \begin{cases} \beta {\lVert \mathbf{x}_v - \mathbf{x}_w \rVert}_2 & \quad \text{if $y > 0$} \\ \infty & \quad \text{if $y = 0$}\end{cases},
+\end{equation*}
+with $\tilde{f}_e(\mathbf{0}, \mathbf{0}, 0) = 0$.\\
+Notice that, with this modelization, there is no constraint on the edges. Hence, $\mathcal{X}_e \coloneq \mathbb{R}^n \times \mathbb{R}^n$, and constraint~\ref{eq:vertices-f} is useless.
 
 \subsection{Intersections as edges\protect\footnote{Largely inspired from~\cite[Chapter 11.2]{Tobia}}}\label{subsec:edges}
-The second option is to consider the intersections of affine subspaces as the edges, and taking for vertices the affine subspaces themselves, plus the source and the target. The source and target are linked by an edge to the subspace (potentially several) they are contained in. The corresponding GCS of the problem of figure~\ref{fig:SPP-problem} is drawn in figure~\ref{fig:edges}.
+\hspace{\indentsize} The second option is to consider the intersections of affine subspaces as the edges, and taking for vertices the affine subspaces themselves, plus the source and the target. The source and target are linked by an edge to the subspace (potentially several) they are contained in. Again, we consider a directed graph by duplicating all the edges between two vertices different from the source and the target. Finally, we associate to each vertex different from the source and the target the cost associated with the affine subspace. The corresponding GCS of the problem of figure~\ref{fig:SPP-problem} is drawn in figure~\ref{fig:edges}.
 
 \begin{figure}[!htb]
     \centering
-    \begin{tikzpicture}[node distance={3cm}]
+    \begin{tikzpicture}[node distance={3cm}, every text node part/.style={align=center}]
         \node[draw, circle] (1) {$s$};
-        \node[draw, circle] (2) [right of=1] {$A_1 x + b_1 = 0$};
-        \node[draw, circle] (3) [right of=2] {$A_2 x + b_2 = 0$};
-        \node[draw, circle] (4) [above of=3] {$A_3 x + b_3 = 0$};
-        \node[draw, circle] (5) [above of=4] {$t$};
+        \node[draw, circle] (2) [right of=1] {$y = 3x + 3$ \\ $\beta = 1$};
+        \node[draw, circle] (3) [right of=2] {$y = 0$ \\ $\beta = 10$};
+        \node[draw, circle] (4) [above of=3] {$y = -3x + 3$ \\ $\beta = 1$};
+        \node[draw, circle] (5) [right of=4] {$t$};
 
-        \draw (1) to (2);
-        \draw (2) to (3);
-        \draw (2) to (4);
-        \draw (3) to (4);
-        \draw (4) to (5);
+        \draw[thick,  ->] (1) to (2);
+        \draw[thick, <->] (2) to (3);
+        \draw[thick, <->] (2) to (4);
+        \draw[thick, <->] (3) to (4);
+        \draw[thick,  ->] (4) to (5);
     \end{tikzpicture}
     \caption{GCS corresponding to the problem presented in figure~\ref{fig:SPP-problem}, with the intersections of subspaces as edges.}\label{fig:edges}
 \end{figure}
 
-Let $\mathcal{V}$ (resp. $\mathcal{E}$) be the set of vertices (resp.~edges). For each affine subspace, we define the convex region \[\mathcal{C}_i \coloneq \{x \in \mathbb{R}^n \mid A_i x + b_i = 0\}, \qquad i = 1, \dots, m.\]
-To each vertex $j \in \mathcal{V}\setminus\{s, t\}$, we associate the convex constraint set $\mathcal{X}_j \coloneq \mathcal{C}_j \times \mathcal{C}_j$. Therefore, the points inside those sets can be seen as pairs of two points in the affine subspace: the starting point and the ending point. Mathematically, $\mathbf{x}_i \coloneq (\mathbf{q}_{i,0}, \mathbf{q}_{i,1})$, with $\mathbf{q}_{i,0}, \mathbf{q}_{i,1} \in \mathbb{R}^n$. We associate a cost function on those vertices, begin the euclidean distance between the two points, multiplied by the cost of the affine subspace: \[f_i(\mathbf{x}_i) = \beta_i {\lVert \mathbf{q}_{i,0} - \mathbf{q}_{i,1} \rVert}_2, \qquad i = 1, \dots, m\]
-For all the edges between two such vertices, we have to ensure the continuity of the path by imposing $\mathbf{q}_{i,1} = \mathbf{q}_{j,0}$, where $i$ and $j$ are the vertices incident to the edge.
+\hspace{\indentsize} For each affine subspace $i = 1, \dots, m$, we define the convex region \[\mathcal{C}_i \coloneq \{\mathbf{x} \in \mathbb{R}^n \mid A_i \mathbf{x} + b_i = 0, {\lVert \mathbf{x} \rVert}_\infty \leq R\}.\]
+Again, $R$ is chosen big enough, and this $L_\infty$-ball is there to bound the set. Then, we associate to each vertex $v \in \mathcal{V}\setminus\{s, t\}$ the convex constraint set $\mathcal{X}_v \coloneq \mathcal{C}_i \times \mathcal{C}_i$, where $i$ corresponds to the index of the affine subspace associated to node $v$. The points inside those sets can be seen as pairs of two points in the affine subspace: the starting point and the ending point. Mathematically, $\mathbf{x}_v \coloneq (\mathbf{q}_{v,0}, \mathbf{q}_{v,1})$, with $\mathbf{q}_{v,0}, \mathbf{q}_{v,1} \in \mathbb{R}^n$. The homogenization of the set $\mathcal{X}_v$ is given by \[\tilde{\mathcal{X}}_v \coloneq \{(\mathbf{q}_{v,0}, \mathbf{q}_{v,1}, y) \in \mathbb{R}^n \times \mathbb{R}^n \times \mathbb{R}_{\geq 0} \left\lvert A_i \mathbf{q}_{v,0} + b_i y = A_i \mathbf{q}_{v,1} + b_i y = 0, {\lVert \mathbf{q}_{v,0} \rVert}_\infty \leq Ry, {\lVert \mathbf{q}_{v,1} \rVert}_\infty \leq Ry \right.\}\]
+We associate a cost function on those vertices, being the euclidean distance between the two points, multiplied by the cost of the affine subspace: \[f_v(\mathbf{x}_v) = \beta_v {\lVert \mathbf{q}_{v,0} - \mathbf{q}_{v,1} \rVert}_2, \qquad \forall v \in \mathcal{V}.\]
+For the source $s$ and the target $t$, we define $\mathcal{X}_s$ and $\mathcal{X}_t$ in the same way as in subsection~\ref{subsec:vertices}, and their homogenization are given by~\ref{eq:homogenizationSourceTarget}. No cost is associated to those vertices.
 
-The source and the target are paired with the singletons corresponding to their coordinates. No cost function is associated with them. We impose that for all vertex $i \in \mathcal{V}$ incident to the source (resp.~target), $\mathbf{q}_{i,0}$ (resp. $\mathbf{q}_{i,1}$) is equal to the coordinates of $s$ (resp. $t$).
+\hspace{\indentsize} Having a cost on the vertices is problematic, as the model~\ref{eq:vertices} is defined for a graph with no cost on the vertices, and nonnegative costs on the edges. To solve this problem, we are going to transfer the cost from the vertices to the edges outgoing the vertices. I.e., for each edge $e = (v,w) \in \mathcal{E}$, we associate the cost function\footnote{To be fully rigorous, we should not take the edges outgoing the source.} \[f_e(\mathbf{q}_{v,0}, \mathbf{q}_{v,1}, \mathbf{q}_{w,0}, \mathbf{q}_{w,1}) = \beta_v {\lVert \mathbf{q}_{v,0} - \mathbf{q}_{v,1} \rVert}_2.\]
 
-Finally, 
+Finally, to ensure the continuity of the path, we impose a constraint on the edges by associating them to the convex set\footnote{Again, for rigor, when $v = s$, we may replace $\mathbf{q}_{v,0}$ and $\mathbf{q}_{v,1}$ by $\mathbf{q}_s$. Similarly, when $w = t$, we may replace $\mathbf{q}_{w,0}$ and $\mathbf{q}_{w,1}$ by $\mathbf{q}_t$.} \[\mathcal{X}_e \coloneq \{(\mathbf{q}_{v,0}, \mathbf{q}_{v,1}, \mathbf{q}_{w,0}, \mathbf{q}_{w,1}) \in \mathbb{R}^{4n} \mid \mathbf{q}_{v,1} = \mathbf{q}_{w,0}\} \qquad \forall e = (v,w) \in \mathcal{E}.\]
+The homogenization of this set is given by \[\tilde{\mathcal{X}}_e \coloneq \{(\mathbf{q}_{v,0}, \mathbf{q}_{v,1}, \mathbf{q}_{w,0}, \mathbf{q}_{w,1}, y) \in \mathbb{R}^{4n} \times \mathbb{R}_{\geq 0} \mid \mathbf{q}_{v,1} = \mathbf{q}_{w,0}\} \qquad \forall e = (v,w) \in \mathcal{E}.\]
 
 \section{Numerical experiments}\label{sec:experiments}
+The implementation of these two models is available at \url{https://github.com/CharlesVanHees/SPPAffineSubspaces}.
 
 \printbibliography{}
 \end{document}
