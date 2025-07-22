@@ -23,8 +23,8 @@ function problemToGraphE(P::Problem)
     return G
 end
 
-function SPPGraphE(G::DirectedGraph, s::Vector{T}, t::Vector{T}, Optimizer = Gurobi, verbose::Bool=true) where {T <: Real}
-    n = size(G.Vertices[1].A, 2)
+function SPPGraphE(G::DirectedGraph, s::Vector{T}, t::Vector{T}, Optimizer::Module = Gurobi, verbose::Bool=true) where {T <: Real}
+    n = size(s, 1)
 
     model = Model(Optimizer.Optimizer); set_silent(model)
 
@@ -36,7 +36,7 @@ function SPPGraphE(G::DirectedGraph, s::Vector{T}, t::Vector{T}, Optimizer = Gur
         q_1_out[1:G.V, 1:G.V, 1:n]
     end)
     for i in 1:G.V, j in 1:G.V
-        if isnothing(G.Adj[i][j])       # no edge between i and j
+        if isnothing(G.Adj[i][j])       # no edge from i to j
             fix(y_e[i,j], 0)
             for k in 1:n
                 fix(q_0_in[ i,j,k], 0)
@@ -90,12 +90,12 @@ function SPPGraphE(G::DirectedGraph, s::Vector{T}, t::Vector{T}, Optimizer = Gur
     if verbose
         println("The optimal path is the following:")
         i = findfirst(Vector(value.(y_e[1,:])) .== 1)
-        println("Source s = $(s) on AS $(i - 1)")
+        println("Source s = $(s) on AS $(i - 1)\n")
         while i != G.V
             j = findfirst(Vector(value.(y_e[i,:])) .== 1)
             print("$(Vector(value.(q_0_out[i,j,:]))) --> $(Vector(value.(q_1_out[i,j,:]))) to reach ")
             j == G.V ? println("target t") : println("AS $(j-1)")
-            println("The cost is $(G.Adj[i][j] * sqrt(sum((Vector(value.(q_0_out[i,j,:])) - Vector(value.(q_1_out[i,j,:]))).^2)))")
+            println("The cost is $(G.Adj[i][j] * sqrt(sum((Vector(value.(q_0_out[i,j,:])) - Vector(value.(q_1_out[i,j,:]))).^2)))\n")
             i = j
         end
         println("Target t = $(t)")
