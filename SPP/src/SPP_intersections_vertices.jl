@@ -36,7 +36,7 @@ function problemToGraphV(P::Problem)
     return G
 end
 
-function SPPGraphV(G::DirectedGraph, s::Vector{T}, t::Vector{T}, Optimizer::Module = Gurobi, verbose::Bool=true) where {T <: Real}
+function SPPGraphV(G::DirectedGraph, s::Vector{T}, t::Vector{T}; Optimizer::Module = Gurobi, R = 10000000000, verbose::Bool=true) where {T <: Real}
     n = size(s, 1)
 
     model = Model(Optimizer.Optimizer); set_silent(model)
@@ -76,10 +76,10 @@ function SPPGraphV(G::DirectedGraph, s::Vector{T}, t::Vector{T}, Optimizer::Modu
 
     # Ball
     @constraints(model, begin
-        [i in 1:G.V, j in 1:G.V; G.Adj[i][j] ≠ nothing], x_out[i,j,:] .<=  10*ones(n)*y_e[i,j]
-        [i in 1:G.V, j in 1:G.V; G.Adj[i][j] ≠ nothing], x_out[i,j,:] .>= -10*ones(n)*y_e[i,j]
-        [i in 1:G.V, j in 1:G.V; G.Adj[i][j] ≠ nothing], x_in[ i,j,:] .<=  10*ones(n)*y_e[i,j]
-        [i in 1:G.V, j in 1:G.V; G.Adj[i][j] ≠ nothing], x_in[ i,j,:] .>= -10*ones(n)*y_e[i,j]
+        [i in 1:G.V, j in 1:G.V, k in 1:n; G.Adj[i][j] ≠ nothing], x_out[i,j,k] <=  R*y_e[i,j]
+        [i in 1:G.V, j in 1:G.V, k in 1:n; G.Adj[i][j] ≠ nothing], x_out[i,j,k] >= -R*y_e[i,j]
+        [i in 1:G.V, j in 1:G.V, k in 1:n; G.Adj[i][j] ≠ nothing], x_in[ i,j,k] <=  R*y_e[i,j]
+        [i in 1:G.V, j in 1:G.V, k in 1:n; G.Adj[i][j] ≠ nothing], x_in[ i,j,k] >= -R*y_e[i,j]
     end)
 
     optimize!(model); println()
