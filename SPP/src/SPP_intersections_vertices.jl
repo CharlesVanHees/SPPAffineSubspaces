@@ -5,21 +5,21 @@ include("Graph.jl")
 include("Problem.jl")
 
 function problemToGraphV(P::Problem)
-    I = zeros((size(P.s,1), size(P.s,1))); for i in 1:size(P.s,1) I[i,i] = 1 end # Identity matrix
+    I = zeros(Int64, (size(P.s,1), size(P.s,1))); for i in 1:size(P.s,1) I[i,i] = 1 end # Identity matrix
 
-    G = emptyDirectedGraph(Tuple{AffineSubspace, AffineSubspace})
+    G = emptyDirectedGraph(Tuple{AffineSubspace, AffineSubspace, Int64, Int64})
 
-    s = AffineSubspace(I, -P.s, 0.0)
-    addVertex!(G, (s,s)) # The source is the first vertex
-    t = AffineSubspace(I, -P.t, 0.0)
-    addVertex!(G, (t,t)) # The target is the second vertex
+    s = AffineSubspace(I, -P.s, 0.)
+    addVertex!(G, (s,s,0,0)) # The source is the first vertex
+    t = AffineSubspace(I, -P.t, 0.)
+    addVertex!(G, (t,t,0,0)) # The target is the second vertex
     for i in 1:P.M, j in P.intersections[i]
         if i < j
-            addVertex!(G, (P.affSubspaces[i], P.affSubspaces[j]))
-            P.containSource[i] ? addEdge!(G, (s,s), (P.affSubspaces[i], P.affSubspaces[j]), P.affSubspaces[i].β) : nothing
-            P.containSource[j] ? addEdge!(G, (s,s), (P.affSubspaces[i], P.affSubspaces[j]), P.affSubspaces[j].β) : nothing
-            P.containTarget[i] ? addEdge!(G, (P.affSubspaces[i], P.affSubspaces[j]), (t,t), P.affSubspaces[i].β) : nothing
-            P.containTarget[j] ? addEdge!(G, (P.affSubspaces[i], P.affSubspaces[j]), (t,t), P.affSubspaces[j].β) : nothing
+            addVertex!(G, (P.affSubspaces[i], P.affSubspaces[j], i, Int64(j)))
+            P.containSource[i] ? addEdge!(G, (s,s,0,0), (P.affSubspaces[i], P.affSubspaces[j],i,Int64(j)), P.affSubspaces[i].β) : nothing
+            P.containSource[j] ? addEdge!(G, (s,s,0,0), (P.affSubspaces[i], P.affSubspaces[j],i,Int64(j)), P.affSubspaces[j].β) : nothing
+            P.containTarget[i] ? addEdge!(G, (P.affSubspaces[i], P.affSubspaces[j],i,Int64(j)), (t,t,0,0), P.affSubspaces[i].β) : nothing
+            P.containTarget[j] ? addEdge!(G, (P.affSubspaces[i], P.affSubspaces[j],i,Int64(j)), (t,t,0,0), P.affSubspaces[j].β) : nothing
         end
     end
 
@@ -33,33 +33,44 @@ function problemToGraphV(P::Problem)
             addEdge!(G, G.Vertices[j], G.Vertices[i], G.Vertices[i][2].β);
         end
     end
+    for i in 1:P.M
+        P.containSource[i] && P.containTarget[i] ? addEdge!(G, (s,s,0,0), (t,t,0,0), P.affSubspaces[i].β) : nothing
+    end
+
     return G
 end
 
-function SPPGraphV(G::DirectedGraph, s::Vector{T}, t::Vector{T}; Optimizer::Module = Gurobi, R = 10000000000, verbose::Bool=true) where {T <: Real}
+function SPPGraphV(G::DirectedGraph, s::Vector, t::Vector; Optimizer::Module = Gurobi, R = 10000000000, verbose::Bool=true)
     n = size(s, 1)
 
-    model = Model(Optimizer.Optimizer); set_silent(model)
+    model = Model(Optimizer.Optimizer)# ; set_silent(model)
+    if !verbose set_silent(model) end
+    set_optimizer_attribute(model, "NumericFocus", 3)
 
     @variable(model, y_e[1:G.V, 1:G.V], Bin)
     @variables(model, begin
         x_in[ 1:G.V, 1:G.V, 1:n] # edge from i to j, from the point of view of j
         x_out[1:G.V, 1:G.V, 1:n] # edge from i to j, from the point of view of i
     end)
+    @variable(model, w[1:G.V, 1:G.V]) # Auxiliary variables for the second order cone
     for i in 1:G.V, j in 1:G.V
-        if isnothing(G.Adj[i][j])      # no edge from i to j
+        if isnothing(G.Adj[i][j])     # no edge from i to j
             fix(y_e[i,j], 0)
             for k in 1:n
                 fix(x_in[ i,j,k],0)
                 fix(x_out[i,j,k],0)
             end
+            fix(w[i,j], 0)
         end
     end
 
-    @objective(model, Min, sum(G.Adj[i][j] ≠ nothing ? G.Adj[i][j] * sqrt(sum((x_out[i,j,:] .- x_in[i,j,:]).^2)) : 0 for i in 1:G.V, j in 1:G.V))
+    @objective(model, Min, sum(G.Adj[i][j] ≠ nothing ? G.Adj[i][j] * w[i,j] : 0 for i in 1:G.V, j in 1:G.V))
+
+    # Second order cone constraint
+    @constraint(model, [i in 1:G.V, j in 1:G.V], [w[i,j]; x_out[i,j,:] .- x_in[i,j,:]] in SecondOrderCone())
 
     # Flow conservation constraint 1
-    @constraint(model, [i in 1:G.V], (sum(G.Adj[j][i] ≠ nothing ? y_e[j,i] : 0 for j in 1:G.V) + (i==1)) == (sum(G.Adj[i][j] ≠ nothing ? y_e[i,j] : 0 for j in 1:G.V) + (i == 2)))
+    @constraint(model, [i in 1:G.V], (sum(G.Adj[j][i] ≠ nothing ? y_e[j,i] : 0 for j in 1:G.V) + (i==1)) == (sum(G.Adj[i][j] ≠ nothing ? y_e[i,j] : 0 for j in 1:G.V) + (i==2)))
     # Degree constraint
     @constraint(model, [i in 1:G.V], (sum(G.Adj[j][i] ≠ nothing ? y_e[j,i] : 0 for j in 1:G.V) + (i==1)) <= 1)
 
@@ -70,8 +81,8 @@ function SPPGraphV(G::DirectedGraph, s::Vector{T}, t::Vector{T}; Optimizer::Modu
     @constraints(model, begin
         [i in 1:G.V, j in 1:G.V; G.Adj[i][j] ≠ nothing], (G.Vertices[i][1].A * x_out[i,j,:] + G.Vertices[i][1].b * y_e[i,j]) .== 0
         [i in 1:G.V, j in 1:G.V; G.Adj[i][j] ≠ nothing], (G.Vertices[i][2].A * x_out[i,j,:] + G.Vertices[i][2].b * y_e[i,j]) .== 0
-        [i in 1:G.V, j in 1:G.V; G.Adj[i][j] ≠ nothing], (G.Vertices[j][1].A * x_in[i,j,:] + G.Vertices[j][1].b * y_e[i,j]) .== 0
-        [i in 1:G.V, j in 1:G.V; G.Adj[i][j] ≠ nothing], (G.Vertices[j][2].A * x_in[i,j,:] + G.Vertices[j][2].b * y_e[i,j]) .== 0
+        [i in 1:G.V, j in 1:G.V; G.Adj[i][j] ≠ nothing], (G.Vertices[j][1].A * x_in[ i,j,:] + G.Vertices[j][1].b * y_e[i,j]) .== 0
+        [i in 1:G.V, j in 1:G.V; G.Adj[i][j] ≠ nothing], (G.Vertices[j][2].A * x_in[ i,j,:] + G.Vertices[j][2].b * y_e[i,j]) .== 0
     end)
 
     # Ball
@@ -89,15 +100,17 @@ function SPPGraphV(G::DirectedGraph, s::Vector{T}, t::Vector{T}; Optimizer::Modu
     end
 
     if verbose
+        println(value.(y_e))
         println("The optimal path is the following:")
         println("Source s = $(s)\n")
         i = 1
         while i != 2
-            j = findfirst(Vector(value.(y_e[i,:])) .== 1)
-            println("$(Vector(value.(x_out[i,j,:]))) --> $(Vector(value.(x_in[i,j,:])))")
+            j = findfirst(abs.(Vector(value.(y_e[i,:])) .-1 ) .<= 1e-4)
+            print("$(Vector(value.(x_out[i,j,:]))) --> $(Vector(value.(x_in[i,j,:]))) ")
+            j == 2 ? println("to reach target t") : println("at the intersection of AS $(G.Vertices[j][3]) and AS $(G.Vertices[j][4])")
             println("The cost is $(G.Adj[i][j] * sqrt(sum((Vector(value.(x_in[i,j,:])) - Vector(value.(x_out[i,j,:]))).^2)))\n")
             i = j
         end
-        println("Target t = $(t)")
+        println("Target t = $(t)\n")
     end
 end

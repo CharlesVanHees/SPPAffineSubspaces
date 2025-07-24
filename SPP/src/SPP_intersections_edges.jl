@@ -5,17 +5,17 @@ include("Graph.jl")
 include("Problem.jl")
 
 function problemToGraphE(P::Problem)
-    I = zeros((size(P.s,1), size(P.s,1))); for i in 1:size(P.s,1) I[i,i] = 1 end # Identity matrix
+    I = zeros(Int64, (size(P.s,1), size(P.s,1))); for i in 1:size(P.s,1) I[i,i] = 1 end # Identity matrix
 
     G = emptyDirectedGraph(AffineSubspace)
 
-    s = AffineSubspace(I, -P.s, 0.0) # The source can be seen as an affine subspace of equation x - s = 0.
+    s = AffineSubspace(I, -P.s, 0.) # The source can be seen as an affine subspace of equation x - s = 0.
     addVertex!(G, s) # The first vertex is the source
     for AS in P.affSubspaces addVertex!(G, AS) end
-    t = AffineSubspace(I, -P.t, 0.0)
+    t = AffineSubspace(I, -P.t, 0.)
     addVertex!(G, t) # The last vertex is the target
 
-    for i in findall(P.containSource) addEdge!(G, s, P.affSubspaces[i], 0.0) end
+    for i in findall(P.containSource) addEdge!(G, s, P.affSubspaces[i], 0.) end
     for i in 1:P.M
         for e in P.intersections[i] addEdge!(G, P.affSubspaces[i], P.affSubspaces[e], P.affSubspaces[i].β) end
     end
@@ -23,10 +23,12 @@ function problemToGraphE(P::Problem)
     return G
 end
 
-function SPPGraphE(G::DirectedGraph, s::Vector{T}, t::Vector{T}; Optimizer::Module = Gurobi, R = 10000000000, verbose::Bool=true) where {T <: Real}
+function SPPGraphE(G::DirectedGraph, s::Vector, t::Vector; Optimizer::Module = Gurobi, R = 10000000000, verbose::Bool=true)
     n = size(s, 1)
 
-    model = Model(Optimizer.Optimizer); set_silent(model)
+    model = Model(Optimizer.Optimizer)
+    if !verbose set_silent(model) end
+    set_optimizer_attribute(model, "NumericFocus", 3)
 
     @variable(model, y_e[1:G.V, 1:G.V], Bin)
     @variables(model, begin
@@ -47,7 +49,10 @@ function SPPGraphE(G::DirectedGraph, s::Vector{T}, t::Vector{T}; Optimizer::Modu
         end
     end
 
-    @objective(model, Min, sum(G.Adj[i][j] ≠ nothing ? G.Adj[i][j] * sqrt(sum((q_1_out[i,j,:] .- q_0_out[i,j,:]).^2)) : 0 for i in 2:G.V, j in 2:G.V))
+    @variable(model, w[1:G.V, 1:G.V])
+    @constraint(model, [i in 1:G.V, j in 1:G.V], [w[i,j]; q_1_out[i,j,:] .- q_0_out[i,j,:]] in SecondOrderCone())
+
+    @objective(model, Min, sum(G.Adj[i][j] ≠ nothing ? G.Adj[i][j] * w[i,j] : 0 for i in 2:G.V, j in 2:G.V))
 
     # Flow conservation constraint 1
     @constraint(model, [i in 1:G.V], (sum(G.Adj[j][i] ≠ nothing ? y_e[j,i] : 0 for j in 1:G.V) + (i==1)) == (sum(G.Adj[i][j] ≠ nothing ? y_e[i,j] : 0 for j in 1:G.V) + (i==G.V)))
@@ -88,16 +93,17 @@ function SPPGraphE(G::DirectedGraph, s::Vector{T}, t::Vector{T}; Optimizer::Modu
     end
 
     if verbose
+        println(value.(y_e))
         println("The optimal path is the following:")
-        i = findfirst(Vector(value.(y_e[1,:])) .== 1)
+        i = findfirst(abs.(Vector(value.(y_e[1,:])) .-1 ) .<= 1e-4)
         println("Source s = $(s) on AS $(i - 1)\n")
         while i != G.V
-            j = findfirst(Vector(value.(y_e[i,:])) .== 1)
+            j = findfirst(abs.(Vector(value.(y_e[i,:])) .-1 ) .<= 1e-4)
             print("$(Vector(value.(q_0_out[i,j,:]))) --> $(Vector(value.(q_1_out[i,j,:]))) to reach ")
             j == G.V ? println("target t") : println("AS $(j-1)")
             println("The cost is $(G.Adj[i][j] * sqrt(sum((Vector(value.(q_0_out[i,j,:])) - Vector(value.(q_1_out[i,j,:]))).^2)))\n")
             i = j
         end
-        println("Target t = $(t)")
+        println("Target t = $(t)\n")
     end
 end

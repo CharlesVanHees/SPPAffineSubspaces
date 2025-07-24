@@ -4,9 +4,9 @@ include("../src/Problem.jl")
 include("../src/SPP_intersections_edges.jl")
 
 # Create a problem with 3 affine subspaces
-A1 = AffineSubspace([0.  1. 0. 0.], [ 0.], 10.0)
-A2 = AffineSubspace([3. -1. 0. 0.], [ 3.],  1.0)
-A3 = AffineSubspace([3.  1. 0. 0.], [-3.],  1.0)
+A1 = AffineSubspace([0.  1. 0. 0.],    [ 0.],  10.)
+A2 = AffineSubspace([3. -1. 0. 0.],    [ 3.],   1.)
+A3 = AffineSubspace([3.  1. 0. 0.],    [-3.],   1.)
 P = emptyProblem()
 push!(P, A1)
 push!(P, A2)

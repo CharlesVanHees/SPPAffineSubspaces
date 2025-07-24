@@ -12,7 +12,6 @@ emptyDirectedGraph(T::Union{DataType, UnionAll}) = DirectedGraph(UInt64(0), UInt
 
 function addVertex!(G::DirectedGraph, value::T) where {T}
     @assert T <: eltype(G.Vertices)
-    if (value in G.Vertices) return end
     for i in eachindex(G.Adj) push!(G.Adj[i], nothing) end
     G.V += 1
     push!(G.Vertices, value)
@@ -21,12 +20,14 @@ end
 
 function addEdge!(G::DirectedGraph, i::T, j::T, w::Number) where {T}
     @assert T <: eltype(G.Vertices)
-    i, j = findfirst(==(i), G.Vertices), findfirst(==(j), G.Vertices)
-    @assert i ≠ nothing && j ≠ nothing
-    if (G.Adj[i][j] ≠ nothing)
-        G.Adj[i][j] = min(G.Adj[i][j], w) # We take the minimum between the two weights
-    else
-        G.E += 1; G.Adj[i][j] = w
+    I, J = findall(==(i), G.Vertices), findall(==(j), G.Vertices)
+    @assert size(I,1) ≠ 0 && size(J,1) ≠ 0
+    for i in I, j in J
+        if (G.Adj[i][j] ≠ nothing)
+            G.Adj[i][j] = min(G.Adj[i][j], w) # We take the minimum between the two weights
+        else
+            G.E += 1; G.Adj[i][j] = w
+        end
     end
 end
 
@@ -35,7 +36,7 @@ function printGraph(G::DirectedGraph)
     println("Number of edges: $(G.E)\n")
 
     println("Vertices list:")
-    print("[ "); for i in eachindex(G.Vertices) print("$(G.Vertices[i]) ") end; println("]")
+    print("["); for i in eachindex(G.Vertices) println("$(G.Vertices[i]) ") end; println("]")
 
     println("Adjacency matrix:")
     for i in eachindex(G.Adj)
