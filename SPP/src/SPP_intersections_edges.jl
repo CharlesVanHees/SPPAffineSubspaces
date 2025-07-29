@@ -23,12 +23,12 @@ function problemToGraphE(P::Problem)
     return G
 end
 
-function SPPGraphE(G::DirectedGraph, s::Vector, t::Vector; Optimizer::Module = Gurobi, R = 10000000000, verbose::Bool=true)
+function SPPGraphE(G::DirectedGraph, s::Vector, t::Vector; Optimizer::Module = Gurobi, R = 1000, verbose::Bool=true)
     n = size(s, 1)
 
     model = Model(Optimizer.Optimizer)
     if !verbose set_silent(model) end
-    set_optimizer_attribute(model, "NumericFocus", 3)
+    # set_optimizer_attribute(model, "NumericFocus", 3)
 
     @variable(model, y_e[1:G.V, 1:G.V], Bin)
     @variables(model, begin
@@ -50,7 +50,7 @@ function SPPGraphE(G::DirectedGraph, s::Vector, t::Vector; Optimizer::Module = G
     end
 
     @variable(model, w[1:G.V, 1:G.V])
-    @constraint(model, [i in 1:G.V, j in 1:G.V], [w[i,j]; q_1_out[i,j,:] .- q_0_out[i,j,:]] in SecondOrderCone())
+    @constraint(model, [i in 1:G.V, j in 1:G.V], [w[i,j]; (q_1_out[i,j,:] .- q_0_out[i,j,:])] in SecondOrderCone())
 
     @objective(model, Min, sum(G.Adj[i][j] ≠ nothing ? G.Adj[i][j] * w[i,j] : 0 for i in 2:G.V, j in 2:G.V))
 

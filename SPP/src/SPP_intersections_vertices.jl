@@ -40,12 +40,12 @@ function problemToGraphV(P::Problem)
     return G
 end
 
-function SPPGraphV(G::DirectedGraph, s::Vector, t::Vector; Optimizer::Module = Gurobi, R = 10000000000, verbose::Bool=true)
+function SPPGraphV(G::DirectedGraph, s::Vector, t::Vector; Optimizer::Module = Gurobi, R = 1000, verbose::Bool=true)
     n = size(s, 1)
 
     model = Model(Optimizer.Optimizer)# ; set_silent(model)
     if !verbose set_silent(model) end
-    set_optimizer_attribute(model, "NumericFocus", 3)
+    # set_optimizer_attribute(model, "NumericFocus", 3)
 
     @variable(model, y_e[1:G.V, 1:G.V], Bin)
     @variables(model, begin
@@ -67,7 +67,7 @@ function SPPGraphV(G::DirectedGraph, s::Vector, t::Vector; Optimizer::Module = G
     @objective(model, Min, sum(G.Adj[i][j] ≠ nothing ? G.Adj[i][j] * w[i,j] : 0 for i in 1:G.V, j in 1:G.V))
 
     # Second order cone constraint
-    @constraint(model, [i in 1:G.V, j in 1:G.V], [w[i,j]; x_out[i,j,:] .- x_in[i,j,:]] in SecondOrderCone())
+    @constraint(model, [i in 1:G.V, j in 1:G.V], [w[i,j]; (x_out[i,j,:] .- x_in[i,j,:])] in SecondOrderCone())
 
     # Flow conservation constraint 1
     @constraint(model, [i in 1:G.V], (sum(G.Adj[j][i] ≠ nothing ? y_e[j,i] : 0 for j in 1:G.V) + (i==1)) == (sum(G.Adj[i][j] ≠ nothing ? y_e[i,j] : 0 for j in 1:G.V) + (i==2)))

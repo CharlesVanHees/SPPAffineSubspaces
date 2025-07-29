@@ -4,11 +4,11 @@ include("../src/Problem.jl")
 include("../src/SPP_intersections_edges.jl")
 include("../src/SPP_intersections_vertices.jl")
 
-n = 2
+n = 4
 
 P = emptyProblem()
 
-for i in 1:6
+for i in 1:8
     m = rand(1:n-1); push!(P, AffineSubspace(rand([-1,1], (m,n)) .* rand((m,n)), rand([-1,1], m) .* rand(m), rand(1:5)))
 end
 
@@ -23,5 +23,5 @@ printProblem(P)
 G_E = problemToGraphE(P)
 G_V = problemToGraphV(P)
 
-SPPGraphE(G_E, P.s, P.t, verbose=true)
-SPPGraphV(G_V, P.s, P.t, verbose=true)
+SPPGraphE(G_E, P.s, P.t, R=10, verbose=true)
+SPPGraphV(G_V, P.s, P.t, R=10, verbose=true)

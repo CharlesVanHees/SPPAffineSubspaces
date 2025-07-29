@@ -5,6 +5,7 @@
 \usepackage[style=alphabetic]{biblatex}
 \addbibresource{bibliography.bib}
 \usepackage{csquotes}
+\usepackage{enumitem}
 \usepackage[a4paper,left=1.4cm,right=1.4cm,top=2cm,bottom=2cm]{geometry}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
 \usepackage{mathtools}
@@ -17,6 +18,8 @@
 \newlength{\indentsize}
 \setlength{\indentsize}{15pt}
 
+\renewcommand{\thesubsubsection}{\alph{subsubsection})}
+
 \newtheorem*{remark}{Remark}
 
 % chktex-file 44
@@ -28,8 +31,9 @@
 \begin{document}
 \maketitle
 
+\vspace{-0.9cm}
 \begin{abstract}
-    In this short document, we describe the problem of finding the shortest path between a source $\mathbf{s}$ and a target $\mathbf{t}$, both in $\mathbb{R}^n$, while staying on affine subspaces $\{\mathbf{x} \in \mathbb{R}^n \vert A_i \mathbf{x} + b_i = 0\}, i = 1, \dots, m$. In the~\hyperref[sec:statement]{first section}, we introduce the problem and the notations used. Then, in section~\ref{sec:modelization}, we modelize it as a Shortest Path Problem (SPP) in a Graph of Convex Sets (GCS). We will explore two approaches for this. In the~\hyperref[sec:experiments]{last section}, we will discuss the pros and cons of both methods, based on expiments in Julia.
+    In this short document, we describe the problem of finding the shortest path between a source $\mathbf{s}$ and a target $\mathbf{t}$, both in $\mathbb{R}^n$, while staying on affine subspaces $\{\mathbf{x} \in \mathbb{R}^n \vert A_i \mathbf{x} + b_i = 0\}, i = 1, \dots, m$. In the~\hyperref[sec:statement]{first section}, we introduce the problem and the notations used. Then, in section~\ref{sec:modelization}, we modelize it as a Shortest Path Problem (SPP) in a Graph of Convex Sets (GCS). We will explore two approaches for this. In the~\hyperref[sec:experiments]{last section}, we will discuss the pros and cons of both methods, based on experiments in Julia. It will be preceded by a theoretical discussion of the two models in section~\ref{sec:discussion}.
 \end{abstract}
 
 \section{Problem statement}\label{sec:statement}
@@ -116,7 +120,7 @@ For example, the GCS corresponding to the problem of figure~\ref{fig:SPP-problem
     \caption{GCS corresponding to the problem presented in figure~\ref{fig:SPP-problem}, with the intersections as vertices. The coordinates of the intersection points are there only for an illustration purpose.}\label{fig:vertices}
 \end{figure}
 
-\hspace{\indentsize} Let us now describe mathematically all the components of this problem. To each vertex $v \in \mathcal{V}\setminus\{s,t\}$, we associate the convex region corresponding to the intersection of the two corresponding subspaces (let us say $i$ and $j$). This set is nonempty, closed, but not bounded. Therefore, we add an $L_{\infty}$-ball of radius $R$ large enough. The set $\mathcal{X}_v$ can subsequently be described binary \[\mathcal{X}_v \coloneq \left\{\mathbf{x} \in \mathbb{R}^n \left\lvert \begin{bmatrix} A_i \\ A_j \end{bmatrix} \mathbf{x} + \begin{bmatrix} b_i \\ b_j \end{bmatrix} = 0, {\lVert \mathbf{x} \rVert}_\infty \leq R \right.\right\}.\]
+\hspace{\indentsize} Let us now describe mathematically all the components of this problem. To each vertex $v \in \mathcal{V}\setminus\{s,t\}$, we associate the convex region corresponding to the intersection of the two corresponding subspaces (let us say $i$ and $j$). This set is nonempty, closed, but not bounded. Therefore, we add an $L_{\infty}$-ball of radius $R$ large enough. The set $\mathcal{X}_v$ can subsequently be described by \[\mathcal{X}_v \coloneq \left\{\mathbf{x} \in \mathbb{R}^n \left\lvert \begin{bmatrix} A_i \\ A_j \end{bmatrix} \mathbf{x} + \begin{bmatrix} b_i \\ b_j \end{bmatrix} = 0, {\lVert \mathbf{x} \rVert}_\infty \leq R \right.\right\}.\]
 
 The homogenization of this set is~\cite[eq. 2.5]{Tobia} \[\tilde{\mathcal{X}}_v \coloneq \left\{(\mathbf{x},y) \in \mathbb{R}^n \times \mathbb{R}_{\geq 0} \left\lvert \begin{bmatrix} A_i \\ A_j \end{bmatrix} \mathbf{x} + y \begin{bmatrix} b_i \\ b_j \end{bmatrix} = 0, {\lVert \mathbf{x} \rVert}_\infty \leq Ry \right.\right\}.\]
 
@@ -160,7 +164,7 @@ Notice that, with this modelization, there is no constraint on the edges. Hence,
 \end{figure}
 
 \hspace{\indentsize} For each affine subspace $i = 1, \dots, m$, we define the convex region \[\mathcal{C}_i \coloneq \{\mathbf{x} \in \mathbb{R}^n \mid A_i \mathbf{x} + b_i = 0, {\lVert \mathbf{x} \rVert}_\infty \leq R\}.\]
-Again, $R$ is chosen big enough, and this $L_\infty$-ball is there to bound the set. Then, we associate to each vertex $v \in \mathcal{V}\setminus\{s, t\}$ the convex constraint set $\mathcal{X}_v \coloneq \mathcal{C}_i \times \mathcal{C}_i$, where $i$ corresponds to the index of the affine subspace associated to node $v$. The points inside those sets can be seen as pairs of two points in the affine subspace: the starting point and the ending point. Mathematically, $\mathbf{x}_v \coloneq (\mathbf{q}_{v,0}, \mathbf{q}_{v,1})$, with $\mathbf{q}_{v,0}, \mathbf{q}_{v,1} \in \mathbb{R}^n$. The homogenization of the set $\mathcal{X}_v$ is given by \[\tilde{\mathcal{X}}_v \coloneq \{(\mathbf{q}_{v,0}, \mathbf{q}_{v,1}, y) \in \mathbb{R}^n \times \mathbb{R}^n \times \mathbb{R}_{\geq 0} \left\lvert A_i \mathbf{q}_{v,0} + b_i y = A_i \mathbf{q}_{v,1} + b_i y = 0, {\lVert \mathbf{q}_{v,0} \rVert}_\infty \leq Ry, {\lVert \mathbf{q}_{v,1} \rVert}_\infty \leq Ry \right.\}\]
+Again, $R$ is chosen big enough, and the $L_\infty$-ball is there to bound the set. Then, we associate to each vertex $v \in \mathcal{V}\setminus\{s, t\}$ the convex constraint set $\mathcal{X}_v \coloneq \mathcal{C}_i \times \mathcal{C}_i$, where $i$ corresponds to the index of the affine subspace associated to node $v$. The points inside those sets can be seen as pairs of two points in the affine subspace: the starting point and the ending point. Mathematically, $\mathbf{x}_v \coloneq (\mathbf{q}_{v,0}, \mathbf{q}_{v,1})$, with $\mathbf{q}_{v,0}, \mathbf{q}_{v,1} \in \mathbb{R}^n$. The homogenization of the set $\mathcal{X}_v$ is given by \[\tilde{\mathcal{X}}_v \coloneq \{(\mathbf{q}_{v,0}, \mathbf{q}_{v,1}, y) \in \mathbb{R}^n \times \mathbb{R}^n \times \mathbb{R}_{\geq 0} \left\lvert A_i \mathbf{q}_{v,0} + b_i y = A_i \mathbf{q}_{v,1} + b_i y = 0, {\lVert \mathbf{q}_{v,0} \rVert}_\infty \leq Ry, {\lVert \mathbf{q}_{v,1} \rVert}_\infty \leq Ry \right.\}\]
 We associate a cost function on those vertices, being the euclidean distance between the two points, multiplied by the cost of the affine subspace: \[f_v(\mathbf{x}_v) = \beta_v {\lVert \mathbf{q}_{v,0} - \mathbf{q}_{v,1} \rVert}_2, \qquad \forall v \in \mathcal{V}.\]
 For the source $s$ and the target $t$, we define $\mathcal{X}_s$ and $\mathcal{X}_t$ in the same way as in subsection~\ref{subsec:vertices}, and their homogenization are given by~\ref{eq:homogenizationSourceTarget}. No cost is associated to those vertices.
 
@@ -168,6 +172,50 @@ For the source $s$ and the target $t$, we define $\mathcal{X}_s$ and $\mathcal{X
 
 Finally, to ensure the continuity of the path, we impose a constraint on the edges by associating them to the convex set\footnote{Again, for rigor, when $v = s$, we may replace $\mathbf{q}_{v,0}$ and $\mathbf{q}_{v,1}$ by $\mathbf{q}_s$. Similarly, when $w = t$, we may replace $\mathbf{q}_{w,0}$ and $\mathbf{q}_{w,1}$ by $\mathbf{q}_t$.} \[\mathcal{X}_e \coloneq \{(\mathbf{q}_{v,0}, \mathbf{q}_{v,1}, \mathbf{q}_{w,0}, \mathbf{q}_{w,1}) \in \mathbb{R}^{4n} \mid \mathbf{q}_{v,1} = \mathbf{q}_{w,0}\} \qquad \forall e = (v,w) \in \mathcal{E}.\]
 The homogenization of this set is given by \[\tilde{\mathcal{X}}_e \coloneq \{(\mathbf{q}_{v,0}, \mathbf{q}_{v,1}, \mathbf{q}_{w,0}, \mathbf{q}_{w,1}, y) \in \mathbb{R}^{4n} \times \mathbb{R}_{\geq 0} \mid \mathbf{q}_{v,1} = \mathbf{q}_{w,0}\} \qquad \forall e = (v,w) \in \mathcal{E}.\]
+
+\begin{remark} This modelization has a major drawback: it does not allow the path to take two times the same affine subspace. We could duplicate the affine subspaces to deal with that problem, at the cost of increasing the size of the graph. If an affine subspace intersects $\delta$ other subspaces, we should have $\lceil \delta/2 \rceil$ copies of the affine subspace.\end{remark}
+
+\section{Discussion}\label{sec:discussion}
+\subsection{$L_\infty$-ball}
+The choice of the center and of the radius of the ball is crucial: how to be sure it is large enough to capture the optimal solution, while staying small enough to avoid numerical issues?~\cite{Radius}
+
+First, we should check the feasibility of the problem. For this, we have two options. The first one is to discard the ball constraint. The solver will find a solution if and only if there is a path between the source and the target staying on the given affine subspaces. This is ensured by the construction of the graph and by the constraint~\ref{eq:vertices-c}. In fact, a much easier way is to consider the standard graph $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ given by the same nodes and edges as our GCS, and to verify the existence of a path between the source and the target, using an algorithm like Depth-First Search of Breadth-First Search.
+
+Once we are sure of the existence of a path between the source and the target, we can try to minimize the cost along this path, using one of the two models defined previously. First, we can put the center of the ball at the middle point between the source and the target, and set $R$ to some arbitrary small value (e.g. $1$). As long as the solver does not find a solution, we can multiply $R$ by a factor $\alpha$ (possibly non constant). Once a solution is found, its value $U$ is an upper bound on the optimal value. Using this upper bound, we can find the optimal center and radius of the ball, i.e., the ones minimizing the radius and for which we are sure to find the optimal solution. Those values can be obtained by solving the following minimiation problem:
+\begin{equation}
+    \begin{aligned}
+        \min_{\substack{\mathbf{x} \in \mathbb{R}^n \\ R \in \mathbb{R}_{\geq 0}}} && R\\
+        s.t. && \dots
+    \end{aligned}
+\end{equation}
+
+\subsection{Structure of the graphs}
+We define by $p$ the number of intersections of affine subspace in the problem. Recall that $m$ is the number of affine subspaces, and $n$ is the dimension of the space. Furthermore, for each affine subspace $i = 1, \dots, m$, we let $\delta_i$ be the number of affine subspaces it intersects. Notice that $2p = \sum_{i=1}^m \delta_i$.\\
+We will analyse the number of vertices and edges of the graphs of both modelization. Based on this, we will be able to find the number of binary and continuous variables, and of constraints, in the optimization problem. In what follows, we neglect the vertices and edges associated to the source and target, as those are generally marginal with respect to the rest.
+
+\subsubsection{Intersections as vertices}
+When we take the intersections of affine subspaces as the vertices of the graph, we have $|\mathcal{V}| = p$ vertices. The number of edges is \[|\mathcal{E}| = \sum_{i=1}^m \delta_i (\delta_i - 1) = \left(\sum_{i=1}^m {\delta_i}^2 - \sum_{i=1}^m \delta_i\right).\] To see this, consider the intersection between affine subspaces $i$ and $j$. The number of edges incident to the corresponding node is equal to $(\delta_i - 1) + (\delta_j - 1)$. Therefore, we can consider the increments of the two affine subspaces separately. Since affine subspace $i$ has $\delta_i$ intersections, its total contribution is $\delta_i (\delta_i - 1)$. And this is valid for all $i \in \{1, \dots, m\}$. With this, all the edges are counted two times, as desired for the directed graph.
+
+From this, we can infer that there are $|\mathcal{E}|$ binary variables, and $2n|\mathcal{E}|$ continuous variables. The constraints are as follow:
+\begin{itemize}[label={}, leftmargin=0.5cm]
+    \item~\ref{eq:vertices-c} implies $|\mathcal{V}|$        constraints;
+    \item~\ref{eq:vertices-d} implies $n|\mathcal{V}|$       constraints;
+    \item~\ref{eq:vertices-e} implies $2|\mathcal{E}|$ times $(2d+n)$ constraints.
+\end{itemize}
+Hence, the total number of constraints is \[(1+n)p + 2(2d+n) \left(\sum_{i=1}^m {\delta_i}^2 - \sum_{i=1}^m \delta_i\right).\]
+
+\subsubsection{Intersections as edges}
+When the affine subspaces are chosen to be the vertices of the graph, we have $|\mathcal{V}| = m$ vertices and \[|\mathcal{E}| = 2p = \sum_{i=1}^{m} \delta_i\] edges (as all the edges are duplicated to create a directed graph). This implies $|\mathcal{E}|$ binary variables, for $4n|\mathcal{E}|$ continuous variables. Let us now count the number of constraints:
+\begin{itemize}[label={}, leftmargin=0.5cm]
+    \item~\ref{eq:vertices-c} corresponds to $|\mathcal{V}|$   constraints;
+    \item~\ref{eq:vertices-d} corresponds to $2n|\mathcal{V}|$ constraints;
+    \item~\ref{eq:vertices-e} corresponds to $2|\mathcal{E}|$ times $2(d+n)$ constraints;
+    \item~\ref{eq:vertices-f} corresponds to $n|\mathcal{E}|$  constraints.
+\end{itemize}
+The total number of constraints is therefore \[(1+2n)m + 2(4d+5n)p.\]
+
+\subsection{Comments}
+Based on this complexity analysis, the modelization to use seems to be problem-dependent.
 
 \section{Numerical experiments}\label{sec:experiments}
 The implementation of these two models is available at \url{https://github.com/CharlesVanHees/SPPAffineSubspaces}.
