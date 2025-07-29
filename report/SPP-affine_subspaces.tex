@@ -181,13 +181,18 @@ The choice of the center and of the radius of the ball is crucial: how to be sur
 
 First, we should check the feasibility of the problem. For this, we have two options. The first one is to discard the ball constraint. The solver will find a solution if and only if there is a path between the source and the target staying on the given affine subspaces. This is ensured by the construction of the graph and by the constraint~\ref{eq:vertices-c}. In fact, a much easier way is to consider the standard graph $\mathcal{G} = (\mathcal{V}, \mathcal{E})$ given by the same nodes and edges as our GCS, and to verify the existence of a path between the source and the target, using an algorithm like Depth-First Search of Breadth-First Search.
 
-Once we are sure of the existence of a path between the source and the target, we can try to minimize the cost along this path, using one of the two models defined previously. First, we can put the center of the ball at the middle point between the source and the target, and set $R$ to some arbitrary small value (e.g. $1$). As long as the solver does not find a solution, we can multiply $R$ by a factor $\alpha$ (possibly non constant). Once a solution is found, its value $U$ is an upper bound on the optimal value. Using this upper bound, we can find the optimal center and radius of the ball, i.e., the ones minimizing the radius and for which we are sure to find the optimal solution. Those values can be obtained by solving the following minimiation problem:
-\begin{equation}
-    \begin{aligned}
-        \min_{\substack{\mathbf{x} \in \mathbb{R}^n \\ R \in \mathbb{R}_{\geq 0}}} && R\\
-        s.t. && \dots
-    \end{aligned}
-\end{equation}
+Once we are sure of the existence of a path between the source and the target, we can try to minimize the cost along this path, using one of the two models defined previously. First, we can put the center of the ball at the middle point between the source and the target, and set $R$ to some arbitrary small value (e.g. $1$). As long as the solver does not find a solution, we can multiply $R$ by a factor $\alpha$ (possibly non constant). Once a solution is found, its value $U$ is an upper bound on the optimal value. Using this upper bound, we can find the optimal center and radius of the ball, i.e., the ones minimizing the radius and for which we are sure to find the optimal solution. Those values can be obtained by solving the following minimax\footnote{Intuitively, we would like to find the center of the ball that will minimize the worst case, 
+It is a maximization problem as we would like to find the worst case. Using the optimal $R^*$ of this maximization problem will ensure that the optimal solution is in the ball of radius $R^*$.} problem:
+\begin{subequations}\label{eq:ball}
+    \begin{align}
+        \min_{\mathbf{x} \in \mathbb{R}^n} \max_{\substack{R \in \mathbb{R}_{\geq 0} \\ \alpha, \beta \in \mathbb{R}_{\geq 0}}} &&& R\label{eq:ball-a}\\
+        s.t. &&& \alpha = \min_{i=1, \dots, m} \left\{\sqrt{{(x_i + R - s_i)}^2 + \sum_{\substack{j = 1 \\ j \neq i}}^{d}{\left(\frac{t_j - s_j}{2}\right)}^2} + \sqrt{{(x_i + R - t_i)}^2 + \sum_{\substack{j = 1 \\ j \neq i}}{\left(\frac{t_j - s_j}{2}\right)}^2}\right\}\label{eq:ball-b}\\
+             &&& \beta = \min_{i=1, \dots, m} \left\{\sqrt{{(x_i - R - s_i)}^2 + \sum_{\substack{j = 1 \\ j \neq i}}^{d}{\left(\frac{t_j - s_j}{2}\right)}^2} + \sqrt{{(x_i - R - t_i)}^2 + \sum_{\substack{j = 1 \\ j \neq i}}{\left(\frac{t_j - s_j}{2}\right)}^2}\right\}\label{eq:ball-c}\\
+             &&& \min \{\alpha, \beta\} \leq U\label{eq:ball-d}
+    \end{align}
+\end{subequations}
+
+By symmetry, the center $\mathbf{x}$ of the ball should be the mean of the source and target coordinates. Setting $\mathbf{x} = \frac{\mathbf{s} + \mathbf{t}}{2}$ in~\ref{eq:ball-b} and~\ref{eq:ball-c}, we get $\alpha = \beta$. Furthermore, constraint~\ref{eq:ball-d} will be tight at the optimal point. Hence, we are looking to a nonnegative value of $R$ such that \[U = \min_{i=1, \dots,  m} \left\{ \sqrt{{\left(R + \frac{t_i - s_i}{2}\right)}^2 + \sum_{\substack{j=1 \\ j \neq i}}^{d} {\left(\frac{t_j - s_j}{2}\right)}^2} + \sqrt{{\left(R + \frac{s_i - t_i}{2}\right)}^2 + \sum_{\substack{j=1 \\ j \neq i}}^{d} {\left(\frac{t_j - s_j}{2}\right)}^2}\right\}.\]
 
 \subsection{Structure of the graphs}
 We define by $p$ the number of intersections of affine subspace in the problem. Recall that $m$ is the number of affine subspaces, and $n$ is the dimension of the space. Furthermore, for each affine subspace $i = 1, \dots, m$, we let $\delta_i$ be the number of affine subspaces it intersects. Notice that $2p = \sum_{i=1}^m \delta_i$.\\
